@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Notebook UI</title>
+  <style>
+    body { margin: 0; font-family: Arial; background: #ffffff; }
+    header { background: #ff7a00; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 20px; font-weight: bold; }
+    .container { display: flex; height: calc(100vh - 60px); }
+    .sidebar { width: 250px; border-right: 1px solid #ddd; padding: 10px; overflow-y: auto; }
+    .note-item { padding: 10px; border: 1px solid #ddd; margin-bottom: 5px; cursor: pointer; background: #f9f9f9; }
+    .note-item:hover { background: #eee; }
+    .editor { flex: 1; padding: 20px; }
+    input#note-title { width: 100%; padding: 10px; font-size: 18px; margin-bottom: 10px; border: 1px solid #ccc; }
+    textarea#note-content { width: 100%; height: 60%; padding: 10px; font-size: 16px; border: 1px solid #ccc; }
+    button { padding: 10px 15px; margin-right: 5px; border: none; cursor: pointer; }
+    .primary { background: #ff7a00; color: white; }
+    .danger { background: red; color: white; }
+    .secondary { background: #ccc; }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">My Notebook</div>
+</header>
+
+<div class="container">
+  <div class="sidebar">
+    <button class="primary" onclick="newNote()">+ New Note</button>
+    <div id="notes-list" style="margin-top: 15px;">
+      </div>
+  </div>
+
+  <div class="editor">
+    <input type="text" id="note-title" placeholder="Note Title">
+    <textarea id="note-content" placeholder="Write your note here..."></textarea>
+
+    <div style="margin-top:10px;">
+      <button class="primary" onclick="saveNote()">Save</button>
+      <button class="danger" onclick="deleteNote()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = "https://project-0-notes-webapp-fastapi-sqlite-2.onrender.com/notes/";
+  let currentNoteId = null;
+
+  // 1. جلب الملاحظات (تم الإصلاح هنا)
+  async function fetchNotes() {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+
+      // استخراج المصفوفة من داخل الكائن الذي يرسله بايثون
+      const notesArray = data.notes || data;
+
+      const list = document.getElementById('notes-list');
+      list.innerHTML = "";
+
+      if (Array.isArray(notesArray)) {
+        notesArray.forEach(note => {
+          const div = document.createElement('div');
+          div.className = 'note-item';
+
+          // دعم قراءة البيانات سواء كانت Dictionary أو Tuple
+          div.innerText = note.title || note[1] || "ملاحظة بدون عنوان";
+
+          div.onclick = () => loadNoteIntoEditor(note);
+          list.appendChild(div);
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  }
+
+  // 2. عرض ملاحظة
+  function loadNoteIntoEditor(note) {
+    // استخراج الـ id والمحتوى بناءً على نوع البيانات (Dictionary أو Tuple)
+    currentNoteId = note.id || note[0];
+    document.getElementById('note-title').value = note.title || note[1] || "";
+    document.getElementById('note-content').value = note.content || note[2] || "";
+  }
+
+  // 3. ملاحظة جديدة
+  function newNote() {
+    currentNoteId = null;
+    document.getElementById('note-title').value = "";
+    document.getElementById('note-content').value = "";
+  }
+
+  // 4. حفظ أو تحديث
+  async function saveNote() {
+    const title = document.getElementById('note-title').value;
+    const content = document.getElementById('note-content').value;
+
+    if (!title || !content) return alert("Please fill title and content");
+
+    const method = currentNoteId ? 'PUT' : 'POST';
+    const url = currentNoteId ? `${API_URL}${currentNoteId}` : API_URL;
+
+    try {
+      await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+      });
+
+      newNote();
+      fetchNotes();
+    } catch (error) {
+      console.error("Error saving note:", error);
+    }
+  }
+
+  // 5. حذف
+  async function deleteNote() {
+    if (!currentNoteId) return;
+    if (!confirm("Are you sure?")) return;
+
+    try {
+      await fetch(`${API_URL}${currentNoteId}`, { method: 'DELETE' });
+      newNote();
+      fetchNotes();
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    }
+  }
+
+  // تشغيل الجلب فور فتح الصفحة
+  fetchNotes();
+</script>
+
+</body>
+</html>

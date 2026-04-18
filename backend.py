@@ -15,7 +15,7 @@ app.add_middleware(
 
 class Note(BaseModel):
     title: str
-    context: str
+    content: str
 
 
 def setup_db():
@@ -25,7 +25,7 @@ def setup_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
-        context TEXT 
+        content TEXT 
         )
     ''')
         conn.commit()
@@ -48,29 +48,29 @@ async def read_note():
         return notes
     except sqlite3.Error as e:
         print(f"error read: {e}")
-        return {"error": str(e)}    
+        return {"error": str(e)}
 
 @app.post("/notes/")
 async def create_note(note: Note):
     try:
         conn = sqlite3.connect("notes.db")
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO notes (title, context) VALUES (?, ?)', (note.title, note.context))
+        cursor.execute('INSERT INTO notes (title, content) VALUES (?, ?)', (note.title, note.content))
         conn.commit()
         conn.close()
         return {"message": "Note added successfully"}
     except sqlite3.Error as e:
         print(f"error create: {e}")
-        return {"error": str(e)}  
+        return {"error": str(e)}
 
 @app.put("/notes/{id}")
 async def update_note(id: int, note: Note):
-    try:  
+    try:
         conn = sqlite3.connect('notes.db')
         cursor = conn.cursor()
-        cursor.execute("UPDATE notes SET title = ?, context = ? WHERE id = ?",
-                      (note.title, note.context, id))
-        if cursor.rowcount == 0:  
+        cursor.execute("UPDATE notes SET title = ?, content = ? WHERE id = ?",
+                      (note.title, note.content, id))
+        if cursor.rowcount == 0:
             conn.close()
             return {"error": "Note not found"}
         conn.commit()
@@ -83,11 +83,11 @@ async def update_note(id: int, note: Note):
 
 @app.delete("/notes/{id}")
 async def delete_note(id: int):
-    try:  
+    try:
         conn = sqlite3.connect('notes.db')
         cursor = conn.cursor()
         cursor.execute("DELETE FROM notes WHERE id = ?", (id,))
-        if cursor.rowcount == 0:  
+        if cursor.rowcount == 0:
             conn.close()
             return {"error": "Note not found"}
         conn.commit()

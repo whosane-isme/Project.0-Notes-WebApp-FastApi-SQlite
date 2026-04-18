@@ -15,7 +15,7 @@ app.add_middleware(
 
 class Note(BaseModel):
     title: str
-    context: int
+    context: str
 
 
 
@@ -26,7 +26,7 @@ def setup_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
-        context INTEGER 
+        context TEXT 
         )
     ''')
         conn.commit()
@@ -41,11 +41,13 @@ setup_db()
 async def read_note():
     try:
         conn = sqlite3.connect("notes.db")
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute('''SELECT * FROM notes''')
         rows = cursor.fetchall()
+        notes = [dict(row) for row in rows]
         conn.close()
-        return {"notes": rows}
+        return notes
     except sqlite3.Error as e:
         print(f"error read: {e}")
 
